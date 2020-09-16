@@ -25,10 +25,9 @@ import com.graphhopper.jsprit.core.algorithm.ruin.RuinStrategy;
 import com.graphhopper.jsprit.core.algorithm.ruin.listener.RuinListener;
 import com.graphhopper.jsprit.core.problem.job.Job;
 import com.graphhopper.jsprit.core.problem.solution.VehicleRoutingProblemSolution;
+import com.graphhopper.jsprit.core.util.RandomNumberGeneration;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 
 public class RuinAndRecreateModule implements SearchStrategyModule {
@@ -38,6 +37,12 @@ public class RuinAndRecreateModule implements SearchStrategyModule {
     private RuinStrategy ruin;
 
     private String moduleName;
+
+    private Random random = RandomNumberGeneration.newInstance();
+
+    private int minUnassignedJobsToBeReinserted = Integer.MAX_VALUE;
+
+    private double proportionOfUnassignedJobsToBeReinserted = 1d;
 
     public RuinAndRecreateModule(String moduleName, InsertionStrategy insertion, RuinStrategy ruin) {
         super();
@@ -52,7 +57,14 @@ public class RuinAndRecreateModule implements SearchStrategyModule {
         Set<Job> ruinedJobSet = new HashSet<Job>();
         ruinedJobSet.addAll(ruinedJobs);
         ruinedJobSet.addAll(vrpSolution.getUnassignedJobs());
-        Collection<Job> unassignedJobs = insertion.insertJobs(vrpSolution.getRoutes(), ruinedJobSet);
+        List<Job> orderedRuinedJobs = new ArrayList<Job>(ruinedJobSet);
+        Collections.sort(orderedRuinedJobs, new Comparator<Job>() {
+            @Override
+            public int compare(Job o1, Job o2) {
+                return o1.getId().compareTo(o2.getId());
+            }
+        });
+        Collection<Job> unassignedJobs = insertion.insertJobs(vrpSolution.getRoutes(), orderedRuinedJobs);
         vrpSolution.getUnassignedJobs().clear();
         vrpSolution.getUnassignedJobs().addAll(unassignedJobs);
         return vrpSolution;
